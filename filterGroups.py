@@ -5,18 +5,21 @@ import time
 import shutil
 from distutils.dir_util import copy_tree
 
-
 main_token = my_token
 time_interval = 3600 * 24 * 30  # в секундах
-
 
 if os.path.exists("Pools/raw_copy"):
     shutil.rmtree("Pools/raw_copy")
 os.mkdir("Pools/raw_copy")
 copy_tree("Pools/raw", "Pools/raw_copy")
+
+startFrom = 1  # с какого файла начать (нумерация с 1)
+
 for n, item in enumerate(os.listdir("Pools/raw")):
-    # if n < 14:
-    #     continue
+    if n < startFrom - 1:
+        continue
+    if item[-4:] != '.txt' or item[:2] == '__':
+        continue
     with open(f"Pools/raw/{item}") as file:
         groups = file.readlines()
     groups = list(filter(lambda x: x != '\n', groups))
