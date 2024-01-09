@@ -17,7 +17,7 @@ vk = session.get_api()
 post_link = ''
 pathToFolder = "Pools/p"
 startFrom = 1
-goTo = 2
+goTo = 100
 
 pathToPSorted = f"{pathToFolder[:pathToFolder.rfind('/')]}/p_sorted"
 pathToCopy = f"{pathToFolder[:pathToFolder.rfind('/')]}/p_copy"
@@ -87,7 +87,7 @@ for pool in pools:
         pool.write_back(new_path)
     os.remove(pool.path)
 
-if len(os.listdir(pathToFolder)):
+if len(os.listdir(pathToFolder)) == 0:
     os.rmdir(pathToFolder)
 
 print(f"\n\nВ общем итоге: из {allGroups} групп {allPublished} опубликовали пост")

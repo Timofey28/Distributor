@@ -1,16 +1,16 @@
 import vk_api
 import requests
-from data import my_token, V, my_id, t1, t2, t3
+from data import my_token, V, my_id, t0, t1, t2, t3
 import os
 import time
 from datetime import datetime
 from pick import pick
 import shutil
 
-helper_token = t3
-tokens = [t1, t2]
-token_names = ['Имя аккаунта 1', 'Имя аккаунта 2']
-limit_posts = [100, 100]
+helper_token = t0
+tokens = [t1, t2, t3]
+token_limits = [80, 80, 80]
+token_names = ['Имя аккаунта 1', 'Имя аккаунта 2', 'Имя аккаунта 3']
 
 post_link = ''
 current_post_send_counter: list
@@ -32,6 +32,7 @@ def main():
     with open("Pools/tech_part/accounts.txt") as file:
         posts_published = list(filter(lambda x: x != '\n', file.readlines()))
     posts_published = list(map(int, posts_published))
+    resizeList(posts_published, len(tokens))
     for i in range(len(posts_published)):
         if posts_published[i] == -1 and i not in banned:
             posts_published[i] = 0
@@ -41,7 +42,7 @@ def main():
                 continue
             active_tokens.append(tokens[i])
             active_token_names.append(token_names[i])
-            active_token_limits.append(limit_posts[i])
+            active_token_limits.append(token_limits[i])
             tok_nums.append(i)
             if last_opened < day_start:
                 posts_published[i] = 0
@@ -49,6 +50,12 @@ def main():
     with open("Pools/tech_part/current_post_send_counter.txt") as file:
         current_post_send_counter = list(filter(lambda x: x != '\n', file.readlines()))
     current_post_send_counter = list(map(int, current_post_send_counter))
+    poolsAmount = 0
+    for n, item in enumerate(os.listdir("Pools")):
+        if item[-4:] != '.txt' or item[:2] == '__':
+            continue
+        poolsAmount += 1
+    resizeList(current_post_send_counter, poolsAmount)
     index = 0
     for n, item in enumerate(os.listdir("Pools")):
         if item[-4:] != '.txt' or item[:2] == '__':
@@ -76,7 +83,8 @@ def main():
             groupsAmount += len(pool)
 
         title = f"   Всего активных групп: {groupsAmount}"
-        options = ["Запустить рассылку", "Пулы", "Текущее количество публикаций с аккаунтов", "Поменять/посмотреть пост", "Собрать статистику", "Удалить группу", "Выход"]
+        options = ["Запустить рассылку", "Пулы", "Текущее количество публикаций с аккаунтов",
+                   "Поменять/посмотреть пост", "Собрать статистику", "Удалить группу", "Выход"]
         option, index = pick(options, title, indicator='=>', default_index=index if index else 0)
         if option == "Запустить рассылку":
             runSpam()
@@ -84,15 +92,7 @@ def main():
             os.system("cls")
             showPools()
         elif option == "Текущее количество публикаций с аккаунтов":
-            os.system("cls")
-            print("\n\tАккаунт\t\tТекущее количество публикаций\tЛимит\n")
-            for i in range(len(active_tokens)):
-                if tok_nums[i] in banned:
-                    continue
-                status = posts_published[tok_nums[i]]
-                curr_limit = 3 if status == 100 else 2 if status >= 10 else 1
-                print(f"\t{i + 1}) {active_token_names[i]}{' ' * (13 - len(active_token_names[i]))}{status}{' ' * (32 - curr_limit)}{active_token_limits[i]}")
-            input()
+            showAccountsPublications()
         elif option == "Поменять/посмотреть пост":
             changePostLink()
         elif option == "Собрать статистику":
@@ -131,13 +131,14 @@ def runSpam():
         if attach["type"] == "link":
             attachments += attach["link"]["url"]
         else:
-            attachments += attach["type"] + str(attach[attach["type"]]["owner_id"]) + '_' + str(attach[attach["type"]]["id"])
+            attachments += attach["type"] + str(attach[attach["type"]]["owner_id"]) + '_' + str(
+                attach[attach["type"]]["id"])
 
     os.system("cls")
     publications = 0  # сколько постов еще можно опубликовать
     for i in range(len(posts_published)):
         if posts_published[i] != -1:
-            publications += limit_posts[i] - posts_published[i]
+            publications += token_limits[i] - posts_published[i]
 
     title = "   В какие группы кидать пост? (перемещение - вверх/вниз, выбрать - пробел)\n"
     title += f"   Еще можно опубликовать {pickUpRightWordEnding(publications, 'пост', 'поста', 'постов')}"
@@ -205,7 +206,7 @@ def runSpam():
         lucky = posts_published[tok_nums[account_counter]]
         deleted = [paths[i][:-4]]
 
-        while lucky >= limit_posts[account_counter] or tok_nums[account_counter] in banned:
+        while lucky >= token_limits[account_counter] or tok_nums[account_counter] in banned:
             account_counter += 1
             if account_counter >= len(active_tokens):
                 os.system("cls")
@@ -247,10 +248,11 @@ def runSpam():
                 spaces = ' ' * (distance - len(str(ids[j])) - len(str(post_id)))
                 distance2 = 10
                 spaces2 = ' ' * (distance2 - len(str(followers[j])))
-                print(f"опубликован после подписки {post_id}{spaces}fol: {followers[j]}{spaces2}(lucky: {lucky})   {active_token_names[account_counter]}")
+                print(
+                    f"опубликован после подписки {post_id}{spaces}fol: {followers[j]}{spaces2}(lucky: {lucky})   {active_token_names[account_counter]}")
                 posts_published[tok_nums[account_counter]] = lucky
                 posts_published[tok_nums[account_counter]] = lucky
-                while lucky >= limit_posts[account_counter] or tok_nums[account_counter] in banned:
+                while lucky >= token_limits[account_counter] or tok_nums[account_counter] in banned:
                     if j == len(ids) - 1 and i == len(paths) - 1:
                         break
                     account_counter += 1
@@ -293,9 +295,10 @@ def runSpam():
                     print("предложен ", end='')
                 else:
                     print("опубликован ", end='')
-                print(f"{post_id}{spaces}fol: {followers[j]}{spaces2}(lucky: {lucky})   {active_token_names[account_counter]}")
+                print(
+                    f"{post_id}{spaces}fol: {followers[j]}{spaces2}(lucky: {lucky})   {active_token_names[account_counter]}")
                 posts_published[tok_nums[account_counter]] = lucky
-                while lucky >= limit_posts[account_counter] or tok_nums[account_counter] in banned:
+                while lucky >= token_limits[account_counter] or tok_nums[account_counter] in banned:
                     if j == len(ids) - 1 and i == len(paths) - 1:
                         break
                     account_counter += 1
@@ -392,6 +395,7 @@ def getStatistics():
         post_ids = list(map(lambda x: int(x[x.rfind(' ') + 1:]), pools[i]))
         screen_names = list(map(lambda x: x[x.find(' ') + 1:], pools[i]))
         screen_names = list(map(lambda x: x[:x.find(' ')], screen_names))
+        group_types = list(map(lambda x: x[:x.rfind(' ')][-1], pools[i]))
         views = 0
         likes = 0
         comments = 0
@@ -400,29 +404,27 @@ def getStatistics():
             post = {}
             offset = 0
             print(f"\t{j + 1}. club{group_ids[j]} -> ", end='')
-            while True:
-                try:
-                    posts = vk.wall.get(owner_id=-group_ids[j], count=step, offset=offset)["items"]
-                except:
-                    print("доступ к стене закрыт")
-                    offset = -1
-                    break
+            if group_types[j] == 'p':
+                while True:
+                    try:
+                        posts = vk.wall.get(owner_id=-group_ids[j], count=step, offset=offset)["items"]
+                    except:
+                        print("доступ к стене закрыт")
+                        offset = -1
+                        break
 
-                if paths[i] == 'p.txt':
                     for p in posts:
                         if textFromPost in p["text"]:
                             post = p
                             break
                     if post or len(posts) == 0 or posts[-1]["id"] < post_ids[j]:
                         break
-                else:
-                    for p in posts:
-                        if p["id"] == post_ids[j]:
-                            post = p
-                            break
-                    if post or len(posts) == 0 or posts[-1]["id"] < post_ids[j]:
-                        break
-                offset += step
+                    offset += step
+
+            elif group_types[j] == 'o':
+                post = vk.wall.getById(posts=f"-{group_ids[j]}_{post_ids[j]}")[0]
+                if 'is_deleted' in post and post['is_deleted'] is True:
+                    post = None
 
             if offset == -1:  # доступ к стене закрыт
                 continue
@@ -443,7 +445,7 @@ def getStatistics():
                 if post["comments"]["count"] > 0:
                     commentedPost_links.append(link)
             else:
-                if paths[i] == 'p.txt':
+                if group_types[j] == 'p':
                     new_pool.append(pools[i][j])
                     print("пока не опубликовали")
                 else:
@@ -473,9 +475,11 @@ def getStatistics():
     with open("Pools/tech_part/current_post_send_counter.txt", "w") as file:
         file.writelines(list(map(lambda x: str(x) + '\n', current_post_send_counter)))
 
-    print(f"\n\n\tОбщее число удаленных постов: {postsBefore - postsAfter}\n\tИзменение размера пулов: {postsBefore} -> {postsAfter}")
+    print(
+        f"\n\n\tОбщее число удаленных постов: {postsBefore - postsAfter}\n\tИзменение размера пулов: {postsBefore} -> {postsAfter}")
     with open(f"Статистика.txt", "a", encoding="utf-8") as file:
-        file.write(f"\n\n\nОбщая статистика ({postsAfter} постов):\n\tпросмотров: {allViews}\n\tлайков: {allLikes}\n\tкомментариев: {allComments}\n\tрепостов: {allReposts}\n\n")
+        file.write(
+            f"\n\n\nОбщая статистика ({postsAfter} постов):\n\tпросмотров: {allViews}\n\tлайков: {allLikes}\n\tкомментариев: {allComments}\n\tрепостов: {allReposts}\n\n")
         file.write(f"Ссылки на посты с комментариями:")
         for cpl in commentedPost_links:
             file.write(f"\n    {cpl}")
@@ -544,6 +548,21 @@ def showPools(endProgram=False):
         input()
 
 
+def showAccountsPublications():
+    os.system("cls")
+    print("\n\tАккаунт\t\tТекущее количество публикаций\tЛимит\n")
+    for i in range(len(tokens)):
+        status = posts_published[i]
+        if status == -1:
+            print(
+                f"\t{i + 1}) {token_names[i]}{' ' * (13 - len(token_names[i]))}{'забанен'}{' ' * 25}{token_limits[i]}")
+            continue
+        curr_limit = 3 if status >= 100 else 2 if status >= 10 else 1
+        print(
+            f"\t{i + 1}) {token_names[i]}{' ' * (13 - len(token_names[i]))}{status}{' ' * (32 - curr_limit)}{token_limits[i]}")
+    input()
+
+
 def deleteGroup():
     os.system("cls")
     print("\n\tВведи ссылку на группу, которую нужно удалить: ")
@@ -569,7 +588,8 @@ def deleteGroup():
             print("\n\tГруппа удалена!\n\tНажми enter для возврата в главное меню")
             input()
             return
-    print("\n\tТакое группы нет. Возможно, она уже была удалена во время сбора статистики\n\tНажми enter для возврата в главное меню")
+    print(
+        "\n\tТакое группы нет. Возможно, она уже была удалена во время сбора статистики\n\tНажми enter для возврата в главное меню")
     input()
 
 
@@ -593,12 +613,16 @@ def checkAccounts():
     if len(banned) > 0:
         ban_tokens = " (" + ban_tokens + ")" if ban_tokens else ""
         answer = f"Внезапная проверка аккаунтов:\nдействующих: {ok}\nзабаненных: {len(banned)}{ban_tokens}"
-        requests.get(f"https://api.vk.com/method/messages.send?user_id={my_id}&message={answer}&random_id=0&access_token={helper_token}&v={V}")
+        requests.get(
+            f"https://api.vk.com/method/messages.send?user_id={my_id}&message={answer}&random_id=0&access_token={helper_token}&v={V}")
+    if len(banned) == len(tokens):
+        print("Все аккаунты забанены")
+        exit(0)
 
 
 def cantPublishAnymore():
     for i in range(len(posts_published)):
-        if posts_published[i] != -1 and posts_published[i] < limit_posts[i]:
+        if posts_published[i] != -1 and posts_published[i] < token_limits[i]:
             return False
     return True
 
@@ -630,6 +654,13 @@ def createTechPartIfNotExist():
             for _ in range(pools_amount):
                 file.write('0\n')
         open("Pools/tech_part/post_link.txt", 'x')
+
+
+def resizeList(list_, newSize, filling=0):
+    if newSize > len(list_):
+        list_.extend([filling for _ in range(len(list_), newSize)])
+    elif newSize < len(list_):
+        del list_[newSize:]
 
 
 if __name__ == '__main__':
